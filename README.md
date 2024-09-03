@@ -40,10 +40,89 @@ First we load the necessary libraries. We then import the group chat
 data from a file called `message_1.html`. This raw source data is not
 shared on GitHub to maintain privacy of group member communications.
 
+``` r
+# Load necessary libraries
+library(rvest)
+library(dplyr)
+library(magrittr)
+library(stringr)
+library(future)
+library(furrr)
+library(ggplot2)
+library(tidyr)
+library(lubridate)
+
+# Load the HTML file
+
+on.hpc = FALSE
+
+if(on.hpc){
+  file_path = "message_1.html"
+} else {
+  file_path <- "C:\\Users\\saiee\\OneDrive\\Documents\\_Northwestern Residency\\Research\\Miscellaneous Analyses\\message_1.html" #URL on PC
+}
+
+page <- read_html(file_path)
+
+# Extract the text content from the HTML
+text_content <- page %>% html_text()
+
+# Split the text content into individual lines
+lines <- str_split(text_content, "(?=Wordle )") %>% .[[1]]
+
+# Loop through each line to find and extract Wordle data
+params <- list('i' = seq(2,length(lines)))
+```
+
 We then create a function `calc_row` for examining a single line of html
 from the chat. This function assesses whether the line contains a Wordle
 post. If it does, then it extracts that Wordle data and create a row of
 data summarizing the Wordle post. If not, it returns an NA row.
+
+``` r
+calc_row <- function(i) {
+  line <- str_trim(lines[i]) %>% {sub(',','',.)}
+  
+  # Check if the line contains a Wordle result
+  if (str_detect(line, "\\d+ \\d/6")) {
+    # Extract the Wordle number, guesses, and user
+    wordle_number <- str_extract(line, "Wordle \\d+") %>% str_extract("\\d+") %>% as.numeric()
+    guess <- str_extract(line, "\\d/6") %>% str_extract("\\d") %>% as.numeric()
+    user <- word(lines[i-1],-1)
+
+    # Find the WordleBot skill and luck scores in the following lines
+    skill <- str_extract(line, "Skill \\d+/99") %>% str_extract("\\d+") %>% as.numeric()
+    luck <- str_extract(line, "Luck \\d+/99") %>% str_extract("\\d+") %>% as.numeric()
+    
+    # Extract the date from two lines above the Wordle result
+    date <- str_trim(line) %>% str_extract("[A-Za-z]{3} \\d{1,2}, \\d{4}")
+
+    wordle_data <- data.frame(
+      'Date' = date,
+      'User' = user,
+      'Wordle' = wordle_number,
+      'Guesses' = guess,
+      'Skill' = skill,
+      'Luck' = luck,
+      stringsAsFactors = FALSE
+    )
+  } else {
+    wordle_data <- data.frame(
+      'Date' = NA,
+      'User' = NA,
+      'Wordle' = NA,
+      'Guesses' = NA,
+      'Skill' = NA,
+      'Luck' = NA,
+      stringsAsFactors = FALSE
+    )
+  }
+  
+  return(wordle_data)
+  
+  
+}
+```
 
 The next chunk plans and execute the parallel computing process using
 library functions from the `furrr` package. The code runs `calc_row` on
@@ -51,8 +130,59 @@ each line of text, collects the results as a list of N 1x6 data frames,
 and combines the rows to make an Nx6 data frame and saves the data to a
 CSV file.
 
+``` r
+plan(multicore, workers = 3)
+wordle <- future_pmap(params, calc_row, .progress = TRUE) %>%
+  bind_rows()
+
+# now save the data to a csv
+
+write.csv(wordle, file = 'wordle_data.csv')
+```
+
 We then clean the data. Data cleaning steps are explained in in-line
 comments.
+
+``` r
+# Some 'users' identified in calc_row(...) are actually just random words.
+# Here I extract names of real users on the basis that their names are 
+# capitalized. I could have hard-coded vector of my friends' names,
+# e.g., c('Alex','Hector', etc.), but I am keeping them anonymous in the
+# source code shared on GitHub
+
+real_user_names <- wordle %>%
+  pull(User) %>%
+  unique() %>%
+  {.[c(grepl("^[A-Za-z]+$",substr(.,1,1)) &
+         substr(.,1,1) == substr(toupper(.),1,1))]}
+
+# my friends names in the graphs and figures will be replaced by those below
+# obtained from https://1000randomnames.com/
+replacement_names <- c('River Edwards','Adrian Hawkins','Ariel O’Connell',
+                       'Jovanni Woodward','Drew Norris','Cairo Adkins',
+                       'Emelia McPherson','Foster Reid','Charlee Salas',
+                       'Zaiden Gallagher','Elliott Dejesus','Rio Bailey')
+
+# Recode the 'guesses' values as a factor variable,
+# filter to include posts only by real_user_names,
+# fill in missing dates with the adjacent dates,
+# and parse the dates (strings) to lubridate dates
+
+wordle %<>% 
+  mutate(Guesses = Guesses %>% as.factor()) %>% 
+  filter(User %in% real_user_names) %>% 
+  fill(Date) %>% 
+  mutate(Date = Date %>% mdy())
+
+# replace my friends' names with the anonymous replacement names
+wordle$User = replacement_names[wordle$User %>% as.factor()]
+
+# save the dataset again for sharing on GitHub after names have been anonymized
+write.csv(wordle, 'wordle_data_anonymized.csv')
+
+# keep only posts with valid guess data
+wordle %<>% filter(!is.na(Guesses))
+```
 
 ## Results
 
