@@ -124,7 +124,7 @@ calc_row <- function(i) {
 }
 ```
 
-The next chunk plans and execute the parallel computing process using
+The next chunk plans and executes the parallel computing process using
 library functions from the `furrr` package. The code runs `calc_row` on
 each line of text, collects the results as a list of N 1x6 data frames,
 and combines the rows to make an Nx6 data frame and saves the data to a
@@ -208,8 +208,6 @@ wordle %>% ggplot(aes(color = Guesses, x = Skill, y = Luck)) +
   geom_smooth(method = 'loess')
 ```
 
-    ## `geom_smooth()` using formula = 'y ~ x'
-
 ![](Wordle_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
 Next for fun, here is the scatter plot color coded by user:
@@ -228,8 +226,6 @@ wordle %>% ggplot(aes(color = User, x = Skill, y = Luck)) +
   geom_jitter() + 
   geom_smooth(method = 'loess')
 ```
-
-    ## `geom_smooth()` using formula = 'y ~ x'
 
 ![](Wordle_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
