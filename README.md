@@ -12,11 +12,10 @@ inform subsequent guesses. While success in Wordle might seem to hinge
 on a combination of vocabulary breadth and strategic reasoning, this
 study investigates a less intuitive factor—luck.
 
-This analysis, titled “Better To Be Lucky Than Good: A Wordle Analysis,”
-explores the relative contributions of luck and skill to Wordle
-performance. Using a dataset of Wordle games, we employ an R-based
-analysis to measure how each player’s skill and luck scores correlate
-with the number of guesses required to solve the puzzle.
+This analysis explores the relative contributions of luck and skill to
+Wordle performance. Using a dataset of Wordle games, we employ an
+R-based analysis to measure how each player’s skill and luck scores
+correlate with the number of guesses required to solve the puzzle.
 
 ## Methods
 
@@ -41,122 +40,10 @@ First we load the necessary libraries. We then import the group chat
 data from a file called `message_1.html`. This raw source data is not
 shared on GitHub to maintain privacy of group member communications.
 
-``` r
-# Load necessary libraries
-library(rvest)
-library(dplyr)
-```
-
-    ## 
-    ## Attaching package: 'dplyr'
-
-    ## The following objects are masked from 'package:stats':
-    ## 
-    ##     filter, lag
-
-    ## The following objects are masked from 'package:base':
-    ## 
-    ##     intersect, setdiff, setequal, union
-
-``` r
-library(magrittr)
-library(stringr)
-library(future)
-library(furrr)
-library(ggplot2)
-library(tidyr)
-```
-
-    ## 
-    ## Attaching package: 'tidyr'
-
-    ## The following object is masked from 'package:magrittr':
-    ## 
-    ##     extract
-
-``` r
-library(lubridate)
-```
-
-    ## 
-    ## Attaching package: 'lubridate'
-
-    ## The following objects are masked from 'package:base':
-    ## 
-    ##     date, intersect, setdiff, union
-
-``` r
-# Load the HTML file
-
-on.hpc = FALSE
-
-if(on.hpc){
-  file_path = "message_1.html"
-} else {
-  file_path <- "C:\\Users\\saiee\\OneDrive\\Documents\\_Northwestern Residency\\Research\\Miscellaneous Analyses\\message_1.html" #URL on PC
-}
-
-page <- read_html(file_path)
-
-# Extract the text content from the HTML
-text_content <- page %>% html_text()
-
-# Split the text content into individual lines
-lines <- str_split(text_content, "(?=Wordle )") %>% .[[1]]
-
-# Loop through each line to find and extract Wordle data
-params <- list('i' = seq(2,length(lines)))
-```
-
 We then create a function `calc_row` for examining a single line of html
 from the chat. This function assesses whether the line contains a Wordle
 post. If it does, then it extracts that Wordle data and create a row of
 data summarizing the Wordle post. If not, it returns an NA row.
-
-``` r
-calc_row <- function(i) {
-  line <- str_trim(lines[i]) %>% {sub(',','',.)}
-  
-  # Check if the line contains a Wordle result
-  if (str_detect(line, "\\d+ \\d/6")) {
-    # Extract the Wordle number, guesses, and user
-    wordle_number <- str_extract(line, "Wordle \\d+") %>% str_extract("\\d+") %>% as.numeric()
-    guess <- str_extract(line, "\\d/6") %>% str_extract("\\d") %>% as.numeric()
-    user <- word(lines[i-1],-1)
-
-    # Find the WordleBot skill and luck scores in the following lines
-    skill <- str_extract(line, "Skill \\d+/99") %>% str_extract("\\d+") %>% as.numeric()
-    luck <- str_extract(line, "Luck \\d+/99") %>% str_extract("\\d+") %>% as.numeric()
-    
-    # Extract the date from two lines above the Wordle result
-    date <- str_trim(line) %>% str_extract("[A-Za-z]{3} \\d{1,2}, \\d{4}")
-
-    wordle_data <- data.frame(
-      'Date' = date,
-      'User' = user,
-      'Wordle' = wordle_number,
-      'Guesses' = guess,
-      'Skill' = skill,
-      'Luck' = luck,
-      stringsAsFactors = FALSE
-    )
-  } else {
-    wordle_data <- data.frame(
-      'Date' = NA,
-      'User' = NA,
-      'Wordle' = NA,
-      'Guesses' = NA,
-      'Skill' = NA,
-      'Luck' = NA,
-      stringsAsFactors = FALSE
-    )
-  }
-  
-  return(wordle_data)
-  
-  
-}
-```
 
 The next chunk plans and execute the parallel computing process using
 library functions from the `furrr` package. The code runs `calc_row` on
@@ -164,32 +51,8 @@ each line of text, collects the results as a list of N 1x6 data frames,
 and combines the rows to make an Nx6 data frame and saves the data to a
 CSV file.
 
-``` r
-plan(multicore, workers = 3)
-wordle <- future_pmap(params, calc_row, .progress = TRUE) %>%
-  bind_rows()
-```
-
-    ## 
-    ## Attaching package: 'purrr'
-
-    ## The following object is masked from 'package:magrittr':
-    ## 
-    ##     set_names
-
-``` r
-# now save the data to a csv
-
-write.csv(wordle, file = 'wordle_data.csv')
-```
-
 We then clean the data. Data cleaning steps are explained in in-line
 comments.
-
-    ## Warning: There was 1 warning in `mutate()`.
-    ## ℹ In argument: `Date = Date %>% mdy()`.
-    ## Caused by warning:
-    ## !  1 failed to parse.
 
 ## Results
 
@@ -204,9 +67,6 @@ wordle %>% ggplot(aes(color = Guesses, x = Skill, y = Luck)) +
   geom_jitter()
 ```
 
-    ## Warning: Removed 2018 rows containing missing values or values outside the scale range
-    ## (`geom_point()`).
-
 ![](Wordle_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
 Here is the same graph but overlaid with LOESS curves to show the
@@ -218,14 +78,6 @@ wordle %>% ggplot(aes(color = Guesses, x = Skill, y = Luck)) +
   geom_smooth(method = 'loess')
 ```
 
-    ## `geom_smooth()` using formula = 'y ~ x'
-
-    ## Warning: Removed 2018 rows containing non-finite outside the scale range
-    ## (`stat_smooth()`).
-
-    ## Warning: Removed 2018 rows containing missing values or values outside the scale range
-    ## (`geom_point()`).
-
 ![](Wordle_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
 Next for fun, here is the scatter plot color coded by user:
@@ -234,9 +86,6 @@ Next for fun, here is the scatter plot color coded by user:
 wordle %>% ggplot(aes(color = User, x = Skill, y = Luck)) +
   geom_jitter()
 ```
-
-    ## Warning: Removed 2018 rows containing missing values or values outside the scale range
-    ## (`geom_point()`).
 
 ![](Wordle_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
@@ -247,14 +96,6 @@ wordle %>% ggplot(aes(color = User, x = Skill, y = Luck)) +
   geom_jitter() + 
   geom_smooth(method = 'loess')
 ```
-
-    ## `geom_smooth()` using formula = 'y ~ x'
-
-    ## Warning: Removed 2018 rows containing non-finite outside the scale range
-    ## (`stat_smooth()`).
-
-    ## Warning: Removed 2018 rows containing missing values or values outside the scale range
-    ## (`geom_point()`).
 
 ![](Wordle_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
@@ -268,6 +109,13 @@ wisdom, revealing that high luck scores are more strongly associated
 with fewer guesses, whereas high skill scores demonstrate a surprisingly
 weak association with solving efficiency.
 
+Limitations of this work include non-random sampling of Wordle games
+from a single friend group. Only a minority of games had complete skill,
+luck, and guess scores, which invites selection bias. Clustering of
+skill scores between 80 and 99 in our dataset reduces the ability to
+make inferences about the contribution of low skill scores to the number
+of guesses needed to solve Wordle. However, the
+
 The implications of this study reach beyond mere curiosity, offering
 insights into the nature of problem-solving under uncertainty. In games
 like Wordle, where initial conditions and guesswork can significantly
@@ -276,3 +124,8 @@ role than traditionally acknowledged. This analysis not only sheds light
 on the dynamics of Wordle but also prompts a reevaluation of how we
 understand the balance between luck and skill in similar problem-solving
 contexts.
+
+## Acknowledgements
+
+The introduction and discussion were written with the assistance of
+generative AI.
