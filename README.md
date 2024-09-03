@@ -208,6 +208,8 @@ wordle %>% ggplot(aes(color = Guesses, x = Skill, y = Luck)) +
   geom_smooth(method = 'loess')
 ```
 
+    ## `geom_smooth()` using formula = 'y ~ x'
+
 ![](Wordle_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
 Next for fun, here is the scatter plot color coded by user:
@@ -226,6 +228,8 @@ wordle %>% ggplot(aes(color = User, x = Skill, y = Luck)) +
   geom_jitter() + 
   geom_smooth(method = 'loess')
 ```
+
+    ## `geom_smooth()` using formula = 'y ~ x'
 
 ![](Wordle_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
