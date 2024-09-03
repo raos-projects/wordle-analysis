@@ -29,10 +29,11 @@ publication. This study was exempted from IRB review by not being
 submitted to an IRB.
 
 Analysis was performed in R 4.4.1 using the code below. A total of 2297
-observations were extracted from the chat, of which 279 had valid Skill,
-Luck, and Guess data. To speed up analysis of data with regex, the
-analysis was conducted on Northwestern University’s Quest HPC Cluster
-using parallel computing methods.
+observations were extracted using regex from the chat, of which 279 had
+valid Skill, Luck, and Guess data (12.1%). The remaining observations
+were shared with out Skill and Luck scores either because they predated
+the inclusion of those scores or because users shared results from the
+main Wordle landing page and not from the Wordlebot analyzer.
 
 ## Analysis
 
@@ -59,7 +60,7 @@ on.hpc = FALSE
 if(on.hpc){
   file_path = "message_1.html"
 } else {
-  file_path <- "C:\\Users\\saiee\\OneDrive\\Documents\\_Northwestern Residency\\Research\\Miscellaneous Analyses\\message_1.html" #URL on PC
+  file_path = "C:\\Users\\saiee\\OneDrive\\Documents\\_Northwestern Residency\\Research\\Miscellaneous Analyses\\message_1.html" #URL on PC
 }
 
 page <- read_html(file_path)
@@ -242,9 +243,11 @@ weak association with solving efficiency.
 Limitations of this work include non-random sampling of Wordle games
 from a single friend group. Only a minority of games had complete skill,
 luck, and guess scores, which invites selection bias. Clustering of
-skill scores between 80 and 99 in our dataset reduces the ability to
+skill scores between 70 and 99 in our dataset reduces the ability to
 make inferences about the contribution of low skill scores to the number
-of guesses needed to solve Wordle. However, the
+of guesses needed to solve Wordle. However, the apparent stratification
+of luck by number of guesses strongly suggests the contribution of luck
+to solving the puzzle.
 
 The implications of this study reach beyond mere curiosity, offering
 insights into the nature of problem-solving under uncertainty. In games
